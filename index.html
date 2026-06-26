@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Health Symptom Assessment Agent</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --border: #e5e7eb;
+    --text: #1f2328;
+    --muted: #57606a;
+    --accent: #3b82d4;
+    --accent-dark: #2563b5;
+    --secondary: #7c5cd8;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --success: #16a34a;
+    --info: #0891b2;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #eef1f6;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+  }
+  .header-brand svg { flex-shrink: 0; }
+  .header-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .header-meta {
+    font-size: 11px;
+    color: #9ca3af;
+    text-align: right;
+  }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 800px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .card-header-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .card-body { padding: 18px; }
+
+  /* ─── FORM ELEMENTS ─── */
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.15s;
+    outline: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,212,0.12);
+  }
+  textarea { resize: vertical; min-height: 90px; }
+
+  .form-row { margin-bottom: 14px; }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ─── SYMPTOM TAGS ─── */
+  .tag-input-wrap {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .tag-input-wrap input { flex: 1; }
+  .btn-tag-add {
+    padding: 9px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 700;
+    line-height: 1;
+    transition: background 0.15s;
+  }
+  .btn-tag-add:hover { background: #e8edf5; }
+
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 0;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 20px;
+    padding: 3px 10px 3px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .tag-remove {
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    color: #6b7280;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 2px;
+  }
+  .tag-remove:hover { color: var(--danger); }
+
+  .quick-symptoms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .quick-tag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .quick-tag:hover {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    width: 100%;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+  .btn-primary:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: #eaecf0; color: var(--text); }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn-row .btn { flex: 1; }
+
+  /* ─── SPINNER ─── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading .spinner { display: block; }
+  .loading .btn-label { display: none; }
+
+  /* ─── CHAT PANEL ─── */
+  .chat-panel { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ─── WELCOME STATE ─── */
+  .welcome-box {
+    background: linear-gradient(135deg, #f0f7ff 0%, #f5f0ff 100%);
+    border: 1px solid #c7d9f5;
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .welcome-icon {
+    width: 56px; height: 56px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .welcome-box h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+  .welcome-box p { color: var(--muted); font-size: 13px; max-width: 380px; margin: 0 auto 20px; }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    text-align: left;
+  }
+  .feature-item {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .feature-item-icon {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* ─── ASSESSMENT RESULT ─── */
+  .assessment-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .assessment-header {
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .assessment-title {
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .assessment-timestamp {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Risk badge */
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .risk-low      { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .risk-moderate { background: #fef9c3; color: #a16207; border: 1px solid #fde68a; }
+  .risk-high     { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+  .risk-emergency { background: #dc2626; color: #fff; border: 1px solid #dc2626; }
+
+  /* Risk meter */
+  .risk-meter-wrap { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .risk-meter-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .risk-meter-track {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .risk-meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s ease;
+  }
+  .fill-low       { background: var(--success); }
+  .fill-moderate  { background: var(--warning); }
+  .fill-high      { background: var(--danger); }
+  .fill-emergency { background: #7f1d1d; }
+
+  /* Sections */
+  .result-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .result-section:last-child { border-bottom: none; }
+  .result-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .result-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  /* Condition pills */
+  .conditions-list { display: flex; flex-direction: column; gap: 8px; }
+  .condition-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .condition-name { font-weight: 600; color: var(--text); }
+  .condition-prob {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+  }
+  .prob-high { background: #fee2e2; color: #b91c1c; }
+  .prob-mod  { background: #fef9c3; color: #92400e; }
+  .prob-low  { background: #dcfce7; color: #15803d; }
+
+  /* Recommendations */
+  .rec-list { display: flex; flex-direction: column; gap: 7px; }
+  .rec-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 12px;
+    background: var(--surface);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+    font-size: 13px;
+    color: var(--text);
+  }
+  .rec-item.urgent  { border-left-color: var(--danger);  background: #fef2f2; }
+  .rec-item.caution { border-left-color: var(--warning); background: #fffbeb; }
+  .rec-item.safe    { border-left-color: var(--success); background: #f0fdf4; }
+  .rec-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* AI narrative */
+  .ai-narrative {
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  /* Disclaimer */
+  .disclaimer {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #92400e;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* ─── HISTORY ─── */
+  .history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.13s;
+    background: var(--bg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .history-item:hover { border-color: var(--accent); background: #f0f7ff; }
+  .history-item-left { font-size: 12px; }
+  .history-item-symptoms { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .history-item-time { color: var(--muted); font-size: 11px; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-low       { background: var(--success); }
+  .dot-moderate  { background: var(--warning); }
+  .dot-high      { background: var(--danger); }
+  .dot-emergency { background: #7f1d1d; }
+
+  /* ─── SKELETON ─── */
+  .skeleton-wrap { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .skeleton {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .sk-line    { height: 14px; }
+  .sk-line-sm { height: 10px; width: 60%; }
+  .sk-block   { height: 60px; }
+
+  /* ─── CONFIG ─── */
+  .config-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 8px 18px;
+    border-top: 1px solid var(--border);
+    transition: color 0.13s;
+  }
+  .config-toggle:hover { color: var(--text); }
+  .config-panel {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .config-panel.open { display: flex; }
+
+  /* ─── ERROR ─── */
+  .error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: 14px 16px;
+    color: #b91c1c;
+    font-size: 13px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .error-box-icon { font-size: 16px; flex-shrink: 0; }
+
+  /* ─── EMPTY ─── */
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: #adb5bd;
+    border-top: 1px solid #e5e7eb;
+    padding: 16px;
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="11" stroke="#3b82d4" stroke-width="1.5"/>
+      <path d="M12 7v5l3 3" stroke="#3b82d4" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 12h1.5M14.5 12H16" stroke="#7c5cd8" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    AI Health Symptom Assessment Agent
+    <span class="header-badge">IBM WatsonX</span>
+  </div>
+  <div class="header-meta">
+    Powered by IBM Granite 3 &middot; Project c7ab2667
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT: INPUT -->
+  <aside>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-header-dot" style="background:#3b82d4"></span>
+        Patient Information
+      </div>
+      <div class="card-body">
+
+        <div class="form-grid-2">
+          <div class="form-row">
+            <label for="age">Age</label>
+            <input type="number" id="age" min="1" max="120" placeholder="e.g. 35" />
+          </div>
+          <div class="form-row">
+            <label for="gender">Sex</label>
+            <select id="gender">
+              <option value="">Select</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Other / Prefer not to say</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="duration">Symptom Duration</label>
+          <select id="duration">
+            <option value="">Select duration</option>
+            <option>Less than 24 hours</option>
+            <option>1–3 days</option>
+            <option>4–7 days</option>
+            <option>1–2 weeks</option>
+            <option>2–4 weeks</option>
+            <option>More than 1 month</option>
+            <option>Chronic / ongoing</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="severity">Overall Severity</label>
+          <select id="severity">
+            <option value="">Select severity</option>
+            <option>Mild – manageable, not interfering with daily activities</option>
+            <option>Moderate – somewhat limiting daily activities</option>
+            <option>Severe – significantly limiting daily activities</option>
+            <option>Very Severe – unable to perform daily activities</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Symptoms <span style="color:var(--muted);font-weight:400;text-transform:none;font-size:11px;">(add each symptom)</span></label>
+          <div class="tag-input-wrap">
+            <input type="text" id="symptomInput" placeholder="Type a symptom…" />
+            <button class="btn-tag-add" id="addSymptomBtn" title="Add symptom">+</button>
+          </div>
+          <div class="tags-container" id="tagsContainer"></div>
+          <div class="quick-symptoms" id="quickSymptoms"></div>
+        </div>
+
+        <div class="form-row">
+          <label for="medHistory">Relevant Medical History</label>
+          <textarea id="medHistory" placeholder="e.g. diabetes, hypertension, recent surgery, allergies…"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="medications">Current Medications</label>
+          <input type="text" id="medications" placeholder="e.g. metformin, lisinopril, aspirin…" />
+        </div>
+
+        <button class="btn btn-primary" id="assessBtn">
+          <span class="btn-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle">
+              <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="10" stroke="#fff" stroke-width="2"/>
+            </svg>
+            Assess Symptoms
+          </span>
+          <span class="spinner" id="spinner"></span>
+        </button>
+
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="clearBtn" style="font-size:12px">Clear Form</button>
+          <button class="btn btn-ghost" id="exampleBtn" style="font-size:12px">Load Example</button>
+        </div>
+      </div>
+
+      <!-- CONFIG TOGGLE -->
+      <div class="config-toggle" id="configToggle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 14v-4m0-4h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        API Configuration
+        <svg id="configArrow" width="10" height="10" viewBox="0 0 24 24" fill="none" style="margin-left:auto">
+          <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="config-panel" id="configPanel">
+        <div class="form-row" style="margin:0">
+          <label>WatsonX API Key</label>
+          <input type="text" id="apiKeyInput" value="0uyScL4GoQJAjMoWtG51xz3IsHtLZz_tvw4dD86s4Ab-" />
+        </div>
+
+        <!-- ID mode toggle -->
+        <div class="form-row" style="margin:0">
+          <label>ID Type</label>
+          <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+            <button id="btnUseProject" onclick="switchIdMode('project')"
+              style="flex:1;padding:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--accent);color:#fff;font-family:inherit">
+              Project ID
+            </button>
+            <button id="btnUseSpace" onclick="switchIdMode('space')"
+              style="flex:1;padding:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--surface);color:var(--muted);font-family:inherit">
+              Space ID
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin:0" id="projectIdRow">
+          <label>Project ID <span style="font-weight:400;text-transform:none;font-size:10px;color:#e67e00">(needs WML associated)</span></label>
+          <input type="text" id="projectIdInput" value="c7ab2667-ee82-43eb-8bd9-b11a47a6ad8e" />
+        </div>
+        <div class="form-row" style="margin:0;display:none" id="spaceIdRow">
+          <label>Space ID <span style="font-weight:400;text-transform:none;font-size:10px;color:var(--success)">✓ recommended</span></label>
+          <input type="text" id="spaceIdInput" placeholder="Paste your Deployment Space ID…" />
+        </div>
+
+        <div class="form-row" style="margin:0">
+          <label>Endpoint</label>
+          <input type="text" id="endpointInput" value="https://us-south.ml.cloud.ibm.com" />
+        </div>
+        <div class="form-row" style="margin:0">
+          <label>Model ID</label>
+          <input type="text" id="modelIdInput" value="ibm/granite-3-8b-instruct" />
+        </div>
+
+        <!-- Help note -->
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;font-size:11.5px;color:#92400e;line-height:1.5">
+          <strong>403 no_associated_service_instance?</strong><br/>
+          Your Project must have a <strong>Watson Machine Learning</strong> service associated.<br/>
+          Go to <strong>IBM Cloud → WatsonX → your project → Manage → Services &amp; integrations</strong> and add WML.<br/>
+          Or create a <strong>Deployment Space</strong> with WML and use <strong>Space ID</strong> above.
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-header">
+        <span class="card-header-dot" style="background:#7c5cd8"></span>
+        Assessment History
+      </div>
+      <div class="card-body" style="padding:12px">
+        <div id="historyList">
+          <div class="empty-state">No assessments yet.<br/>Run your first assessment to see history here.</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: RESULTS -->
+  <main>
+    <div class="chat-panel" id="chatPanel">
+
+      <div class="welcome-box" id="welcomeBox">
+        <div class="welcome-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="rgba(255,255,255,0.2)"/>
+            <path d="M12 7v5l3 3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M8.5 11h1M14.5 11h1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h2>Health Symptom Assessment Agent</h2>
+        <p>Powered by IBM Granite 3 on WatsonX. Enter your symptoms and patient information on the left to receive an AI-powered health assessment with risk analysis and care recommendations.</p>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <span class="feature-item-icon" style="background:#3b82d4">AI</span>
+            <span>AI-driven symptom analysis using IBM Granite 3 LLM</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-item-icon" style="background:#16a34a">Rx</span>
+            <span>Personalised care recommendations and next steps</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-item-icon" style="background:#d97706">R</span>
+            <span>Risk stratification: Low, Moderate, High, Emergency</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-item-icon" style="background:#7c5cd8">Dx</span>
+            <span>Possible condition identification with probability scoring</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="error-box" id="errorBox" style="display:none">
+        <span class="error-box-icon">&#9888;</span>
+        <div id="errorMsg">An error occurred. Please check your API configuration and try again.</div>
+      </div>
+
+      <div id="resultArea"></div>
+    </div>
+  </main>
+</div>
+
+<footer>Made with IBM Bob</footer>
+
+<script>
+/* ── STATE ── */
+let symptoms = [];
+let assessmentHistory = [];
+
+const QUICK = [
+  'Headache','Fever','Cough','Fatigue','Nausea',
+  'Chest pain','Shortness of breath','Dizziness','Back pain',
+  'Sore throat','Abdominal pain','Joint pain','Rash','Vomiting'
+];
+
+/* ── INIT ── */
+(function init() {
+  const qc = document.getElementById('quickSymptoms');
+  QUICK.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'quick-tag';
+    b.textContent = s;
+    b.addEventListener('click', () => addSymptom(s));
+    qc.appendChild(b);
+  });
+})();
+
+/* ── TAGS ── */
+function addSymptom(val) {
+  val = (val || document.getElementById('symptomInput').value).trim();
+  if (!val || symptoms.includes(val.toLowerCase())) return;
+  symptoms.push(val.toLowerCase());
+  renderTags();
+  document.getElementById('symptomInput').value = '';
+}
+function removeSymptom(idx) { symptoms.splice(idx, 1); renderTags(); }
+function renderTags() {
+  const c = document.getElementById('tagsContainer');
+  c.innerHTML = '';
+  symptoms.forEach((s, i) => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.innerHTML = s + '<button class="tag-remove" title="Remove">&times;</button>';
+    span.querySelector('.tag-remove').addEventListener('click', () => removeSymptom(i));
+    c.appendChild(span);
+  });
+}
+document.getElementById('addSymptomBtn').addEventListener('click', () => addSymptom());
+document.getElementById('symptomInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addSymptom(); }
+});
+
+/* ── CONFIG TOGGLE ── */
+document.getElementById('configToggle').addEventListener('click', function() {
+  const panel = document.getElementById('configPanel');
+  panel.classList.toggle('open');
+  document.getElementById('configArrow').style.transform =
+    panel.classList.contains('open') ? 'rotate(180deg)' : '';
+});
+
+/* ── CLEAR / EXAMPLE ── */
+document.getElementById('clearBtn').addEventListener('click', function() {
+  symptoms = []; renderTags();
+  ['age','gender','duration','severity','medHistory','medications']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  hideError();
+});
+document.getElementById('exampleBtn').addEventListener('click', function() {
+  document.getElementById('age').value = '45';
+  document.getElementById('gender').value = 'Male';
+  document.getElementById('duration').value = '4–7 days';
+  document.getElementById('severity').value = 'Moderate – somewhat limiting daily activities';
+  document.getElementById('medHistory').value = 'Hypertension, Type 2 Diabetes';
+  document.getElementById('medications').value = 'Metformin 500mg, Lisinopril 10mg';
+  symptoms = [];
+  ['chest pain','shortness of breath','fatigue','sweating','mild nausea'].forEach(addSymptom);
+});
+
+/* ── IBM IAM TOKEN ── */
+async function getIBMToken(apiKey) {
+  // Route through local proxy to avoid CORS when served via http://localhost
+  const resp = await fetch('/proxy/iam', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=urn%3Aibm%3Aparams%3Aoauth%3Agrant-type%3Aapikey&apikey=' + encodeURIComponent(apiKey)
+  });
+  if (!resp.ok) throw new Error('Failed to obtain IBM IAM token. Please verify your API key.');
+  const data = await resp.json();
+  return data.access_token;
+}
+
+/* ── PROMPT ── */
+function buildPrompt(age, gender, duration, severity, symptomList, medHistory, medications) {
+  const sevLabel = severity.split(' – ')[0] || severity;
+  return `You are a knowledgeable AI health assessment assistant. Analyze the following patient information and reported symptoms. Provide a structured, thorough health assessment.
+
+PATIENT PROFILE:
+- Age: ${age || 'Not specified'}
+- Sex: ${gender || 'Not specified'}
+- Symptom Duration: ${duration || 'Not specified'}
+- Severity: ${sevLabel || 'Not specified'}
+- Reported Symptoms: ${symptomList.length ? symptomList.join(', ') : 'None reported'}
+- Medical History: ${medHistory || 'None reported'}
+- Current Medications: ${medications || 'None reported'}
+
+INSTRUCTIONS:
+Provide a structured health assessment in the following exact JSON format (respond ONLY with the JSON, no extra text):
+
+{
+  "risk_level": "Low|Moderate|High|Emergency",
+  "risk_score": <integer 0-100>,
+  "risk_explanation": "<1-2 sentence explanation of the risk level>",
+  "possible_conditions": [
+    {"name": "<condition name>", "probability": "High|Moderate|Low", "description": "<brief description>"},
+    {"name": "<condition name>", "probability": "High|Moderate|Low", "description": "<brief description>"},
+    {"name": "<condition name>", "probability": "Moderate|Low", "description": "<brief description>"}
+  ],
+  "recommendations": [
+    {"type": "urgent|caution|safe", "text": "<recommendation>"},
+    {"type": "urgent|caution|safe", "text": "<recommendation>"},
+    {"type": "urgent|caution|safe", "text": "<recommendation>"},
+    {"type": "urgent|caution|safe", "text": "<recommendation>"}
+  ],
+  "assessment_summary": "<A clear, empathetic 3-4 sentence clinical summary of the assessment, findings, and advice>",
+  "red_flags": ["<red flag symptom or sign if any>"],
+  "follow_up": "<specific follow-up recommendation with timeframe>"
+}
+
+Be thorough, clinically accurate, and empathetic. Always recommend professional medical consultation.`;
+}
+
+/* ── ID MODE TOGGLE ── */
+let _idMode = 'project';
+function switchIdMode(mode) {
+  _idMode = mode;
+  document.getElementById('projectIdRow').style.display  = mode === 'project' ? '' : 'none';
+  document.getElementById('spaceIdRow').style.display    = mode === 'space'   ? '' : 'none';
+  document.getElementById('btnUseProject').style.background = mode === 'project' ? 'var(--accent)' : 'var(--surface)';
+  document.getElementById('btnUseProject').style.color      = mode === 'project' ? '#fff' : 'var(--muted)';
+  document.getElementById('btnUseSpace').style.background   = mode === 'space'   ? 'var(--accent)' : 'var(--surface)';
+  document.getElementById('btnUseSpace').style.color        = mode === 'space'   ? '#fff' : 'var(--muted)';
+}
+
+/* ── CALL WATSONX ── */
+async function callWatsonX(prompt) {
+  const apiKey   = document.getElementById('apiKeyInput').value.trim();
+  const modelId  = document.getElementById('modelIdInput').value.trim();
+
+  const token = await getIBMToken(apiKey);
+
+  // Use space_id or project_id depending on toggle
+  const idKey = _idMode === 'space' ? 'space_id' : 'project_id';
+  const idVal = _idMode === 'space'
+    ? document.getElementById('spaceIdInput').value.trim()
+    : document.getElementById('projectIdInput').value.trim();
+
+  if (!idVal) throw new Error('Please enter a ' + (idVal === 'space_id' ? 'Space ID' : 'Project ID') + ' in API Configuration.');
+
+  const body = {
+    model_id: modelId,
+    [idKey]: idVal,
+    messages: [{ role: 'user', content: prompt }],
+    parameters: {
+      max_new_tokens: 1200,
+      temperature: 0.3,
+      top_p: 0.9,
+      repetition_penalty: 1.05
+    }
+  };
+
+  // Route through local proxy to avoid CORS when served via http://localhost
+  const resp = await fetch('/proxy/watsonx', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error('WatsonX API error ' + resp.status + ': ' + errText.slice(0, 300));
+  }
+
+  const data = await resp.json();
+  return (data?.choices?.[0]?.message?.content || data?.results?.[0]?.generated_text || '').trim();
+}
+
+/* ── PARSE ── */
+function parseAssessment(raw) {
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Could not parse assessment response. The model returned an unexpected format.');
+  return JSON.parse(match[0]);
+}
+
+/* ── HELPERS ── */
+function riskClass(l)  { l=(l||'').toLowerCase(); return l==='emergency'?'risk-emergency':l==='high'?'risk-high':l==='moderate'?'risk-moderate':'risk-low'; }
+function fillClass(l)  { l=(l||'').toLowerCase(); return l==='emergency'?'fill-emergency':l==='high'?'fill-high':l==='moderate'?'fill-moderate':'fill-low'; }
+function dotClass(l)   { l=(l||'').toLowerCase(); return l==='emergency'?'dot-emergency':l==='high'?'dot-high':l==='moderate'?'dot-moderate':'dot-low'; }
+function probClass(p)  { p=(p||'').toLowerCase(); return p==='high'?'prob-high':p==='moderate'?'prob-mod':'prob-low'; }
+function recClass(t)   { t=(t||'').toLowerCase(); return t==='urgent'?'urgent':t==='caution'?'caution':'safe'; }
+function recIcon(t)    { t=(t||'').toLowerCase(); return t==='urgent'?'&#9888;':t==='caution'?'&#9654;':'&#10003;'; }
+function escHtml(str)  { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ── RENDER RESULT ── */
+function renderResult(assessment, ts) {
+  const risk  = assessment.risk_level || 'Unknown';
+  const score = Math.min(100, Math.max(0, assessment.risk_score || 0));
+  const uid   = 'fill_' + Date.now();
+  const conds = assessment.possible_conditions || [];
+  const recs  = assessment.recommendations || [];
+  const flags = assessment.red_flags || [];
+
+  let html = `
+    <div class="assessment-card">
+      <div class="assessment-header">
+        <div class="assessment-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 12l2 2 4-4M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Assessment Report
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="risk-badge ${riskClass(risk)}">${escHtml(risk)} Risk</span>
+          <span class="assessment-timestamp">${ts}</span>
+        </div>
+      </div>
+
+      <div class="risk-meter-wrap">
+        <div class="risk-meter-label">
+          <span style="font-weight:600;color:var(--text)">Risk Score</span>
+          <span style="font-weight:700;color:var(--text)">${score}/100</span>
+        </div>
+        <div class="risk-meter-track">
+          <div class="risk-meter-fill ${fillClass(risk)}" id="${uid}" style="width:0%"></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px">${escHtml(assessment.risk_explanation||'')}</div>
+      </div>`;
+
+  if (assessment.assessment_summary) {
+    html += `<div class="result-section"><div class="result-section-title">Clinical Summary</div>
+      <div class="ai-narrative">${escHtml(assessment.assessment_summary)}</div></div>`;
+  }
+
+  if (conds.length) {
+    html += `<div class="result-section"><div class="result-section-title">Possible Conditions</div>
+      <div class="conditions-list">`;
+    conds.forEach(c => {
+      html += `<div class="condition-item">
+        <div>
+          <div class="condition-name">${escHtml(c.name||'')}</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${escHtml(c.description||'')}</div>
+        </div>
+        <span class="condition-prob ${probClass(c.probability)}">${escHtml(c.probability||'')}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (flags.length) {
+    html += `<div class="result-section">
+      <div class="result-section-title" style="color:#b91c1c">&#9888; Red Flag Symptoms Noted</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${flags.map(f => `<span class="risk-badge risk-high">${escHtml(f)}</span>`).join('')}
+      </div></div>`;
+  }
+
+  if (recs.length) {
+    html += `<div class="result-section"><div class="result-section-title">Recommendations</div>
+      <div class="rec-list">`;
+    recs.forEach(r => {
+      html += `<div class="rec-item ${recClass(r.type)}">
+        <span class="rec-icon">${recIcon(r.type)}</span>
+        <span>${escHtml(r.text||'')}</span>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (assessment.follow_up) {
+    html += `<div class="result-section"><div class="result-section-title">Follow-up Plan</div>
+      <div style="font-size:13px;color:var(--text)">${escHtml(assessment.follow_up)}</div></div>`;
+  }
+
+  html += `<div class="result-section">
+    <div class="disclaimer">
+      <span style="font-size:16px;flex-shrink:0">&#9432;</span>
+      <span><strong>Medical Disclaimer:</strong> This AI-generated assessment is for informational purposes only and does not constitute professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical concerns.</span>
+    </div></div>
+  </div>`;
+
+  return { html, uid, score, risk };
+}
+
+/* ── ASSESS ── */
+document.getElementById('assessBtn').addEventListener('click', async function() {
+  if (!symptoms.length) { showError('Please add at least one symptom before running the assessment.'); return; }
+  hideError();
+  setLoading(true);
+  document.getElementById('welcomeBox').style.display = 'none';
+  document.getElementById('resultArea').innerHTML = loadingSkeleton();
+
+  try {
+    const age        = document.getElementById('age').value.trim();
+    const gender     = document.getElementById('gender').value;
+    const duration   = document.getElementById('duration').value;
+    const severity   = document.getElementById('severity').value;
+    const medHistory = document.getElementById('medHistory').value.trim();
+    const medications = document.getElementById('medications').value.trim();
+
+    const prompt = buildPrompt(age, gender, duration, severity, symptoms, medHistory, medications);
+    const raw = await callWatsonX(prompt);
+    const assessment = parseAssessment(raw);
+
+    const ts = new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const { html, uid, score, risk } = renderResult(assessment, ts);
+
+    document.getElementById('resultArea').innerHTML = html;
+    setTimeout(() => { const f = document.getElementById(uid); if (f) f.style.width = score + '%'; }, 100);
+
+    assessmentHistory.unshift({
+      ts,
+      symptomsLabel: symptoms.slice(0,3).join(', ') + (symptoms.length > 3 ? '…' : ''),
+      risk, score, html, uid
+    });
+    renderHistory();
+
+  } catch (err) {
+    document.getElementById('resultArea').innerHTML = '';
+    showError(err.message || 'An unexpected error occurred.');
+  } finally {
+    setLoading(false);
+  }
+});
+
+/* ── HISTORY ── */
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!assessmentHistory.length) { list.innerHTML = '<div class="empty-state">No assessments yet.</div>'; return; }
+  list.innerHTML = assessmentHistory.map((e, i) => `
+    <div class="history-item" data-idx="${i}">
+      <div class="history-item-left">
+        <div class="history-item-symptoms">${escHtml(e.symptomsLabel)}</div>
+        <div class="history-item-time">${e.ts} &middot; Score: ${e.score}/100</div>
+      </div>
+      <span class="status-dot ${dotClass(e.risk)}" title="${escHtml(e.risk)} Risk"></span>
+    </div>`).join('');
+  list.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', function() {
+      const entry = assessmentHistory[parseInt(this.dataset.idx)];
+      document.getElementById('welcomeBox').style.display = 'none';
+      document.getElementById('resultArea').innerHTML = entry.html;
+      setTimeout(() => { const f = document.getElementById(entry.uid); if (f) f.style.width = entry.score + '%'; }, 100);
+    });
+  });
+}
+
+/* ── UI HELPERS ── */
+function setLoading(on) {
+  const btn = document.getElementById('assessBtn');
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+}
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorBox').style.display = 'flex';
+}
+function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+function loadingSkeleton() {
+  return `<div class="card"><div class="skeleton-wrap">
+    <div class="skeleton sk-line" style="width:50%"></div>
+    <div class="skeleton sk-block"></div>
+    <div class="skeleton sk-line"></div>
+    <div class="skeleton sk-line-sm"></div>
+    <div class="skeleton sk-block"></div>
+    <div class="skeleton sk-line"></div>
+    <div class="skeleton sk-line-sm"></div>
+  </div></div>`;
+}
+</script>
+</body>
+</html>
